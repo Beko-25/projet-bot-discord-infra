@@ -46,6 +46,9 @@ const commands = [
   new SlashCommandBuilder()
     .setName("weather")
     .setDescription("Affiche la météo actuelle à la HE Vinci"),
+  new SlashCommandBuilder()
+    .setName("joke")
+    .setDescription("Affiche une blague")
 ].map((command) => command.toJSON());
 
 client.once("clientReady", async () => {
@@ -96,13 +99,34 @@ client.on("interactionCreate", async (interaction) => {
 
     if (interaction.commandName === "weather") {
       await interaction.deferReply();
-      await interaction.editReply(await getIPLWeather());
+      try {
+        await interaction.editReply(await getIPLWeather());
+      } catch (error) {
+        console.error("Erreur lors de la récupération de la météo :", error);
+        await interaction.editReply(
+          "Impossible de récupérer la météo pour le moment.",
+        );
+      }
+      return;
+    }
+
+    if (interaction.commandName === "joke") {
+      await interaction.deferReply();
+      try {
+        await interaction.editReply(await getJoke());
+      } catch (error) {
+        console.error("Erreur lors de la récupération de la blague :", error);
+        await interaction.editReply(
+          "Impossible de récupérer une blague pour le moment.",
+        );
+      }
+      return;
     }
   } catch (error) {
     console.error("Erreur lors du traitement de la commande Discord :", error);
 
     if (interaction.deferred || interaction.replied) {
-      await interaction.editReply("Impossible de récupérer la météo pour le moment.");
+      await interaction.editReply("Impossible de traiter la commande pour le moment.");
     } else {
       await interaction.reply("Impossible de traiter la commande pour le moment.");
     }
@@ -156,4 +180,24 @@ async function getGroqResponse(prompt: string): Promise<string> {
   return body.response;
 }
 
+
+
+async function getJoke(): Promise<string> {
+  const response = await fetch(`${API_URL}/api/joke`);
+
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(
+      `L'API joke a répondu avec le statut ${response.status}: ${details}`,
+    );
+  }
+
+  const jokeMessage: unknown = await response.json();
+
+  if (typeof jokeMessage !== "string") {
+    throw new Error("La réponse de l'API joke est invalide");
+  }
+
+  return jokeMessage;
+}
 client.login(TOKEN);

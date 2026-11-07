@@ -68,13 +68,24 @@ router.post("/groq", async (req, res) => {
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         {
+          role: "system",
+          content:
+            "Tu es l'assistant d'un bot Discord. Réponds en français, avec un ton " +
+            "sympathique, clair et naturel. Donne d'abord la réponse utile, puis " +
+            "les détails nécessaires. Adapte la longueur à la question, évite le " +
+            "blabla et pose une question si la demande est ambiguë. Utilise un " +
+            "Markdown simple compatible avec Discord : paragraphes courts, listes " +
+            "et blocs de code si nécessaire. N'invente pas de faits ; indique " +
+            "clairement tes limites lorsque tu ne sais pas.",
+        },
+        {
           role: "user",
           content: message.trim(),
         },
       ],
       model: "openai/gpt-oss-120b",
       temperature: 0.6,
-      max_completion_tokens: 1024,
+      max_completion_tokens: 250,
       top_p: 1,
       stream: false,
       reasoning_effort: "medium",
@@ -90,6 +101,31 @@ router.post("/groq", async (req, res) => {
     console.error("Erreur lors de l'appel à Groq :", error);
     res.status(502).json({
       error: "Le service Groq est indisponible",
+    });
+  }
+});
+
+router.get("/joke", async (_req, res) => {
+  try {
+    const url = "https://official-joke-api.appspot.com/random_joke";
+
+    const response = await axios.get(url, {
+      headers: {
+        "User-Agent": "ProjetInfra/1.0",
+      },
+    });
+
+    const { setup, punchline } = response.data;
+
+    const jokeMessage = `Blague du jour :\n${setup}\n${punchline}`;
+
+    res.json(jokeMessage);
+
+  } catch (error) {
+    console.error("Erreur lors de la récupération de la blague :", error);
+
+    res.status(502).json({
+      error: "Impossible de récupérer une blague",
     });
   }
 });
