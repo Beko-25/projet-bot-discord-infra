@@ -48,7 +48,10 @@ const commands = [
     .setDescription("Affiche la météo actuelle à la HE Vinci"),
   new SlashCommandBuilder()
     .setName("joke")
-    .setDescription("Affiche une blague")
+    .setDescription("Affiche une blague"),
+    new SlashCommandBuilder()
+    .setName("cat")
+    .setDescription("Afficher des infos sur les chats"),
 ].map((command) => command.toJSON());
 
 client.once("clientReady", async () => {
