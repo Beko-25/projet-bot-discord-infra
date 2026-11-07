@@ -130,4 +130,28 @@ router.get("/joke", async (_req, res) => {
   }
 });
 
+router.get("/cat", async (_req, res) => {
+  try {
+    const url = "https://meowfacts.herokuapp.com/"
+
+    const response = await axios.get(url, {
+      headers: {
+        "User-Agent": "ProjetInfra/1.0",
+      },
+    });
+
+    const { data } = response.data;
+
+    const message = `Chat du jour: ${data[0] as string}`;
+    res.json({message});
+
+  } catch (error) {
+    console.error("Erreur lors de la récupération de l'information sur les chats", error);
+
+    return res.status(502).json({
+      error: "Impossible de récupérer une information sur les chats"
+    })
+  }
+});
+
 export default router;

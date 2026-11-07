@@ -221,19 +221,25 @@ async function getCat(): Promise<string> {
 
   if(!response.ok) {
     const details = await response.text();
+    console.log(`DéTAILLL: ${details}`);
     throw new Error(
       `L'API joke a répondu avec le statut ${response.status}: ${details}`,
     );
   }
 
   
-  const message: unknown = await response.json();
-
-  if (typeof message !== "string") {
-    throw new Error("La réponse de l'API joke est invalide");
+  const body: unknown = await response.json();
+  
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    !("message" in body) ||
+    typeof body.message !== "string"
+  ) {
+    throw new Error("La réponse de l'API cat est invalide");
   }
 
-  return message;
+  return body.message;
 }
 
 client.login(TOKEN);
