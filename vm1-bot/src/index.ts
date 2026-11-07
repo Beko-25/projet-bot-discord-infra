@@ -122,6 +122,18 @@ client.on("interactionCreate", async (interaction) => {
       }
       return;
     }
+
+    if (interaction.commandName == "cat") {
+      await interaction.deferReply();
+      try {
+        await interaction.editReply(await getCat());
+      } catch (error) {
+        console.error("Erreur lors de la récupération de l'information sur les chats :", error);
+        await interaction.editReply("Impossible de récupérer l'information sur les chats pour le moment.");
+      }
+      return;
+    }
+
   } catch (error) {
     console.error("Erreur lors du traitement de la commande Discord :", error);
 
@@ -200,4 +212,25 @@ async function getJoke(): Promise<string> {
 
   return jokeMessage;
 }
+
+async function getCat(): Promise<string> {
+  const response = await fetch(`${API_URL}/api/cat`);
+
+  if(!response.ok) {
+    const details = await response.text();
+    throw new Error(
+      `L'API joke a répondu avec le statut ${response.status}: ${details}`,
+    );
+  }
+
+  
+  const message: unknown = await response.json();
+
+  if (typeof message !== "string") {
+    throw new Error("La réponse de l'API joke est invalide");
+  }
+
+  return message;
+}
+
 client.login(TOKEN);
