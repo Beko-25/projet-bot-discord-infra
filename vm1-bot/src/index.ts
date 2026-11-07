@@ -9,6 +9,7 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 
+
 const TOKEN = process.env.TOKEN;
 const USER_ID = process.env.USER_ID;
 const API_URL = process.env.API_URL;
@@ -26,6 +27,7 @@ if(!USER_ID){
 if(!API_URL){
     throw new Error("ERROR: the API_URL is invalid");
 }
+
 
 //création du bot et obtention des permissions
 const client = new Client({
@@ -68,21 +70,16 @@ client.once("clientReady", async () => {
 });
 
 client.on("messageCreate", async (message: Message) => {
-  if (message.author.bot) {
+  if (message.author.bot || message.content.trim().length === 0) {
     return;
   }
 
-  if (message.content.trim() === "!ping") {
-    if(message.channel.isSendable()){
-        await message.channel.send("POOOOOOOOOOOOOONGG");
-    }else {
-        throw new Error("Le canal ne permet pas l'envoi de messages");
-    }
-    
-  }
-
-  if (message.content.trim() === "!weather") {
-    await sendWeather(message);
+  try {
+    const response = await getGroqResponse(message.content.trim());
+    await message.reply(response);
+  } catch (error) {
+    console.error("Erreur lors de l'appel à Groq :", error);
+    await message.reply("Impossible de contacter l'assistant pour le moment.");
   }
 });
 
@@ -91,35 +88,27 @@ client.on("interactionCreate", async (interaction) => {
     return;
   }
 
-  if (interaction.commandName === "ping") {
-    await interaction.reply("POOOOOOOOOOOOOONGG");
-  }
+  try {
+    if (interaction.commandName === "ping") {
+      await interaction.reply("POOOOOOOOOOOOOONGG");
+      return;
+    }
 
-  if (interaction.commandName === "weather") {
-    await interaction.deferReply();
-    try {
+    if (interaction.commandName === "weather") {
+      await interaction.deferReply();
       await interaction.editReply(await getIPLWeather());
-    } catch (error) {
-      console.error("Erreur lors de la récupération de la météo :", error);
+    }
+  } catch (error) {
+    console.error("Erreur lors du traitement de la commande Discord :", error);
+
+    if (interaction.deferred || interaction.replied) {
       await interaction.editReply("Impossible de récupérer la météo pour le moment.");
+    } else {
+      await interaction.reply("Impossible de traiter la commande pour le moment.");
     }
   }
 });
 
-async function sendWeather(message: Message): Promise<void> {
-  try {
-    if (!message.channel.isSendable()) {
-      throw new Error("Le canal ne permet pas l'envoi de messages");
-    }
-
-    await message.channel.send(await getIPLWeather());
-  } catch (error) {
-    console.error("Erreur lors de la récupération de la météo :", error);
-    if (message.channel.isSendable()) {
-      await message.channel.send("Impossible de récupérer la météo pour le moment.");
-    }
-  }
-}
 
 async function getIPLWeather(): Promise<string> {
   const response = await fetch(`${API_URL}/api/weather`);
@@ -134,6 +123,37 @@ async function getIPLWeather(): Promise<string> {
   }
 
   return weatherMessage;
+}
+
+
+
+async function getGroqResponse(prompt: string): Promise<string> {
+  const response = await fetch(`${API_URL}/api/groq`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ message: prompt }),
+  });
+
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(
+      `L'API Groq a répondu avec le statut ${response.status}: ${details}`,
+    );
+  }
+
+  const body = await response.json();
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    !("response" in body) ||
+    typeof body.response !== "string"
+  ) {
+    throw new Error("La réponse de l'API Groq est invalide");
+  }
+
+  return body.response;
 }
 
 client.login(TOKEN);

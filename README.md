@@ -103,9 +103,15 @@ API_URL=http://ADRESSE_IP_VM2:3000
 | `USER_ID` | Identifiant Discord du destinataire des notifications. |
 | `API_URL` | URL de base de l'API exécutée sur VM2. |
 
-### API météo - VM2
+### API météo et Groq - VM2
 
-Aucune variable d'environnement n'est actuellement requise par l'API. Les coordonnées de la HE Vinci et le fuseau horaire `Europe/Brussels` sont définis dans la route météo.
+Créer également un fichier `vm2-api/.env` :
+
+```dotenv
+GROQ_API_KEY=votre_clé_groq
+```
+
+La clé Groq ne doit jamais être ajoutée au dépôt. Injectez `GROQ_API_KEY` dans l'environnement de la VM avant de démarrer l'API, ou démarrez Node avec `--env-file=.env` (Node.js 20.6+). Les coordonnées de la HE Vinci et le fuseau horaire `Europe/Brussels` sont définis dans la route météo.
 
 ## Démarrage
 
@@ -168,6 +174,34 @@ Codes de réponse principaux :
 | --- | --- |
 | `200` | Météo récupérée avec succès. |
 | `502` | Le service Open-Meteo est indisponible ou sa réponse est invalide. |
+
+### `POST /api/groq`
+
+Envoie un message au modèle Groq et retourne sa réponse.
+
+**Exemple de requête :**
+
+```bash
+curl -X POST http://ADRESSE_IP_VM2:3000/api/groq `
+  -H "Content-Type: application/json" `
+  -d '{ "message": "Explique simplement ce qu est une API REST." }'
+```
+
+**Exemple de réponse :**
+
+```json
+{
+  "response": "Une API REST est..."
+}
+```
+
+Depuis Discord, écrivez directement votre question dans un DM ou dans un salon où le bot est présent :
+
+```text
+Explique ce qu'est une API REST
+```
+
+Le bot répond à chaque message texte d'un utilisateur. Il ignore les messages des autres bots.
 
 ## Communication entre les machines virtuelles
 
