@@ -1,6 +1,13 @@
 import "dotenv/config";
 import process = require("process");
-import  {  Client, GatewayIntentBits, Message } from "discord.js"; 
+import {
+  Client,
+  GatewayIntentBits,
+  Message,
+  REST,
+  Routes,
+  SlashCommandBuilder,
+} from "discord.js";
 
 const TOKEN = process.env.TOKEN;
 const USER_ID = process.env.USER_ID;
@@ -22,48 +29,97 @@ if(!API_URL){
 
 //création du bot et obtention des permissions
 const client = new Client({
-    intents: [GatewayIntentBits.DirectMessages, GatewayIntentBits.MessageContent],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.MessageContent,
+  ],
 });
 
-client.once("clientReady", async () => {    
-    console.log(`✅ connected as ${client.user?.tag}`);
+const commands = [
+  new SlashCommandBuilder()
+    .setName("ping")
+    .setDescription("Vérifie que le bot répond"),
+  new SlashCommandBuilder()
+    .setName("weather")
+    .setDescription("Affiche la météo actuelle à la HE Vinci"),
+].map((command) => command.toJSON());
 
-        try {
+client.once("clientReady", async () => {
+  console.log(`✅ connected as ${client.user?.tag}`);
+
+  try {
+    const rest = new REST({ version: "10" }).setToken(TOKEN);
+    await rest.put(Routes.applicationCommands(client.user!.id), {
+      body: commands,
+    });
+    console.log("✅ commandes slash enregistrées");
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement des commandes slash :", error);
+  }
+
+  try {
     const user = await client.users.fetch(USER_ID);
-        user.send( `je suis connecté 🫡`);
-    } catch (error) {
-                console.error("Erreur Récupération du USER: " + error);
-    }    
-
+    await user.send("je suis connecté 🫡");
+  } catch (error) {
+    console.error("Erreur Récupération du USER :", error);
+  }
 });
-
-
-
-
 
 client.on("messageCreate", async (message: Message) => {
-    if (message.channel.type !== 1 || message.author.bot) {
-        return;
+  if (message.author.bot) {
+    return;
+  }
+
+  if (message.content.trim() === "!ping") {
+    if(message.channel.isSendable()){
+        await message.channel.send("POOOOOOOOOOOOOONGG");
+    }else {
+        throw new Error("Le canal ne permet pas l'envoi de messages");
+    }
+    
+  }
+
+  if (message.content.trim() === "!weather") {
+    await sendWeather(message);
+  }
+});
+
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isChatInputCommand()) {
+    return;
+  }
+
+  if (interaction.commandName === "ping") {
+    await interaction.reply("POOOOOOOOOOOOOONGG");
+  }
+
+  if (interaction.commandName === "weather") {
+    await interaction.deferReply();
+    try {
+      await interaction.editReply(await getIPLWeather());
+    } catch (error) {
+      console.error("Erreur lors de la récupération de la météo :", error);
+      await interaction.editReply("Impossible de récupérer la météo pour le moment.");
+    }
+  }
+});
+
+async function sendWeather(message: Message): Promise<void> {
+  try {
+    if (!message.channel.isSendable()) {
+      throw new Error("Le canal ne permet pas l'envoi de messages");
     }
 
-    const user = await client.users.fetch(USER_ID);
-
-    if(message.content.startsWith("!ping")){
-        return user.send("POOOOOOOOOOOOOONGG");
+    await message.channel.send(await getIPLWeather());
+  } catch (error) {
+    console.error("Erreur lors de la récupération de la météo :", error);
+    if (message.channel.isSendable()) {
+      await message.channel.send("Impossible de récupérer la météo pour le moment.");
     }
-
-    if(message.content.startsWith("!weather")){
-        try {
-            const weatherMessage = await getIPLWeather();
-            return user.send(weatherMessage);
-        } catch (error) {
-            console.error("Erreur lors de la récupération de la météo :", error);
-            return user.send("Impossible de récupérer la météo pour le moment.");
-        }
-    }
+  }
 }
-);
-        
 
 async function getIPLWeather(): Promise<string> {
   const response = await fetch(`${API_URL}/api/weather`);
