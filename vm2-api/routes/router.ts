@@ -107,7 +107,7 @@ router.post("/groq", async (req, res) => {
 
 router.get("/joke", async (_req, res) => {
   try {
-    const url = "https://official-joke-api.appspot.com/random_joke";
+    const url = "https://blague-api.vercel.app/api?mode=dev";
 
     const response = await axios.get(url, {
       headers: {
@@ -115,9 +115,10 @@ router.get("/joke", async (_req, res) => {
       },
     });
 
-    const { setup, punchline } = response.data;
+    const { blague, reponse } = response.data;
 
-    const jokeMessage = `Blague du jour :\n${setup}\n${punchline}`;
+    const jokeMessage = `Blague -> ${blague}
+    Réponse -> ||${reponse}||\n`;
 
     res.json(jokeMessage);
 
@@ -142,7 +143,7 @@ router.get("/cat", async (_req, res) => {
 
     const { data } = response.data;
 
-    const message = `Chat du jour: ${data[0] as string}`;
+    const message = `😼 -> ${data[0] as string}`;
     res.json({message});
 
   } catch (error) {
